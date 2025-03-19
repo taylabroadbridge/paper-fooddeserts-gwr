@@ -1,0 +1,16 @@
+"0",""
+"0",""
+"0","# Supplementary figure 1:"
+"0","# Variance explained barplot"
+"0","varplot <- variance_explained %>% "
+"0","  ggplot(aes(x = component, y = value)) + "
+"0","  geom_col(fill = ""#bebebe"") + ggtitle(""Variance explained"") +"
+"0","  xlim(c(0, 5)) + xlab(""Principal component"")+"
+"0","  ylab(""Percent of total variance"")+"
+"0","  theme_minimal() + theme(panel.border = element_blank(),"
+"0","                          panel.grid.minor = element_blank(), plot.title=element_text(size=16))"
+"0","varplot"
+"2","Warning:"
+"2"," [38;5;232mRemoved 8 rows containing missing values or values outside the
+scale range (`geom_col()`).[39m
+"

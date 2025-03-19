@@ -1,0 +1,6 @@
+"0","# centroids of the gwr_data sf object using st_centroid
+centroids <- st_centroid(gwr_data)
+"
+"2","Warning:"
+"2"," st_centroid assumes attributes are constant over geometries
+"

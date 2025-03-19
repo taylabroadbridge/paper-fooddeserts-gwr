@@ -1,0 +1,8 @@
+"0","# CHANGE TO abs(C) to use |beta*X| instead of beta*X
+contribution_data <- bind_cols(gwr_data, C)
+"
+"1","[1m[33mError[39m in `bind_cols()`:[22m
+[33m![39m Can't recycle `..1` (size 21603) to match `..2` (size 3361).
+Backtrace:
+[90m 1. [39m[1m[94mdplyr::bind_cols([39m[22mgwr_data, C[1m[94m)[39m[22m
+"

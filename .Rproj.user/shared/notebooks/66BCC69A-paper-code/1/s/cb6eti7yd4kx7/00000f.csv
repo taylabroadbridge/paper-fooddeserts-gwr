@@ -1,0 +1,7 @@
+"0","max_r2 <- max(clustering_data$gwr_localr2)
+"
+"2","Warning in max(clustering_data$gwr_localr2) :"
+"2","
+ "
+"2"," no non-missing arguments to max; returning -Inf
+"

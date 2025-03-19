@@ -1,0 +1,603 @@
+---
+title: "Paper"
+author: "Tayla Broadbridge"
+date: "2025-01-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(tidyverse, tidymodels, dplyr, readr, sf, spdep, tmap, readxl, here, GWmodel)
+```
+
+```{r read in data}
+# read in the tibble (cleaned_data) which was prepared in lsoa-data-cleaning-script.R
+#cleaned_data <- read_csv()
+cleaned_data
+
+# read in shapefile 
+map_lsoa <- st_read("data/shapefiles/LSOA_boundaries_2011_london.shp") %>% 
+  rename(lsoa_code = LSOA11CD, lsoa_name=LSOA11NM, la_code=LAD11CD, la_name=LAD11NM)
+
+# Join the two dataframes together 
+london_polygon <- inner_join(map_lsoa, cleaned_data)
+
+
+```
+
+Reduce study area:
+```{r}
+cleaned_data_reduced <- cleaned_data %>%
+  filter(la_name %in% c("Newham", "Tower Hamlets", "Hackney", "Islington", "Lewisham", 
+                        "Southwark", "Lambeth", "Wandsworth", "Camden", "Haringey", 
+                        "City of London", "Westminster", "Kensington and Chelsea", 
+                        "Hammersmith and Fulham", "Enfield", "Redbridge", "Waltham Forest", 
+                        "Barnet", "Brent", "Harrow", "Greenwich", "Ealing", "Barking and Dagenham"))
+```
+
+```{r Figure 1}
+# Plot study area
+
+```
+
+
+Perform PCA:
+```{r}
+set.seed(142)
+
+# Define recipe: centre and scale 
+foodcategory_recipe <- cleaned_data_reduced %>%
+  dplyr::select(lsoa_code,dairy:`soft drinks`) %>%
+  recipe(~ .) %>% 
+  step_center(all_numeric()) %>% 
+  step_scale(all_numeric()) %>%
+  step_pca(all_numeric(), threshold = 0.80, id = "pca") %>%
+  prep() 
+
+# Calculate PCA loadings
+loadings <- foodcategory_recipe %>%
+  tidy(n = 3) %>%  # get tidy output for the first 3 principal components
+  filter(component %in% c("PC1")) %>%  # filter for the first component
+  mutate(
+    value = ifelse(component == "PC1", -value, value),
+    # flip sign of PC1 loadings
+    terms_ordered = fct_reorder(terms, abs(value)),
+    pos = value < 0  # identify whether value is negative (for Figures 2-3)
+  )
+
+# Percentage variance explained
+variance_explained <- foodcategory_recipe %>% 
+  tidy(id = "pca", type = "variance") %>% 
+  dplyr::filter(terms == "percent variance")
+
+# Extract PC scores from foodcategory_recipe
+PC_scores <- juice(foodcategory_recipe) %>% mutate(PC1=-PC1)
+```
+
+PCA plots: loadings plot and PC1 map
+```{r Figure 2}
+
+loadings_plot_horizontal <- loadings %>%
+  ggplot(aes(x = reorder(terms_ordered, desc(terms_ordered)), y = value, fill = pos)) +
+  geom_col(show.legend = FALSE) +
+  scale_y_continuous(breaks = seq(-0.5, 0.4, 0.1)) +
+  scale_fill_manual(values = c("#fb8072", "#a6cee3")) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_line(size = 0.5),
+    panel.grid.minor = element_blank(),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 16),
+    plot.title = element_text(size = 16),
+    axis.text.x = element_text(angle = 70, vjust = 1, hjust = 1)
+  ) + xlab("") + ylab("")
+
+loadings_plot_horizontal
+
+
+# Supplementary figure 1:
+# Variance explained barplot
+varplot <- variance_explained %>% 
+  ggplot(aes(x = component, y = value)) + 
+  geom_col(fill = "#bebebe") + ggtitle("Variance explained") +
+  xlim(c(0, 5)) + xlab("Principal component")+
+  ylab("Percent of total variance")+
+  theme_minimal() + theme(panel.border = element_blank(),
+                          panel.grid.minor = element_blank(), plot.title=element_text(size=16))
+varplot
+```
+
+Join PC scores with polygon data (joins by `lsoa_code`)
+```{r}
+london_polygon <- left_join(london_polygon, PC_scores)
+```
+
+
+```{r Figure 3}
+# Figure 3: PC1 map 
+
+# define upper and lower bounds (for formatting purposes)
+pc_lower <- min(na.omit(london_polygon)$PC1)
+pc_upper <- max(na.omit(london_polygon)$PC1)
+
+map_pc1 <- tm_shape(na.omit(london_polygon)) + 
+  tm_polygons("PC1", 
+              fill.scale = tm_scale_continuous(values = "-RdBu", limits = c(pc_lower, pc_upper)),
+              col_alpha = 0, 
+              tm_legend(title = "", frame = FALSE, limits = c(pc_lower, pc_upper))) +
+  tm_borders(lwd = 0) + 
+  tm_layout(
+    frame = FALSE, 
+    legend.reverse = TRUE, 
+    legend.is.portrait = TRUE, 
+    legend.text.size = 0.8, 
+    legend.height = 20
+  ) + 
+  tm_title("")
+
+```
+
+Cloropeth maps for socio-demographic variables
+```{r Figure 7 column i}
+# plot income
+# convert income unit to thousands
+london_polygon <- london_polygon %>%
+  mutate(household_median_income_thousands = household_median_income/1000)
+
+map_income <- tm_shape(na.omit(london_polygon)) + tm_polygons("household_median_income_thousands", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1, legend.reverse = TRUE)
+
+# plot BAME
+map_BAME <- tm_shape(na.omit(london_polygon)) + tm_polygons("BAME_2011_perc", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse=TRUE)
+
+# plot walk-time
+map_foodwalk <- tm_shape(na.omit(london_polygon)) + tm_polygons("food_walk", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse=TRUE)
+
+# plot car ownership
+map_carownership <- tm_shape(na.omit(london_polygon)) + tm_polygons("carownership_perc", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse=TRUE)
+
+# plot age
+map_age <- tm_shape(na.omit(london_polygon)) + tm_polygons("avg_age", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse = TRUE)
+```
+
+
+# Spatial clustering code
+```{r Global and Local Moran's I calculations}
+# Create spatial weights matrix using queen contiguity scheme
+
+clustering_data <- na.omit(london_polygon)
+
+# Contiguity style weights matrix according to queen criterion
+weights <- poly2nb(clustering_data, queen = TRUE, snap = 1e-5) #boundaries <snap distance apart are contiguous 
+# row standardised spatial weights
+weights <- nb2listw(weights, style = "W")
+
+# Global Moran's I for PC1
+gmi <- moran.test(clustering_data$PC1, listw = weights)
+
+# LISA cluster instead?
+# Compute Local Moran's I
+# In addition, we output an attribute data frame "quadr" with mean and median quadrant columns, and a column splitting on the demeaned variable and lagged demeaned variable at zero.
+lisa <- localmoran(clustering_data$PC1, weights)
+summary(lisa)
+
+# LISA clusters according to significance level of 0.05
+significance <- 0.05
+clustering_data$clusters <- attributes(lisa)$quadr$mean
+
+clustering_data$clusters[lisa[ ,5] > significance] <- "Insignificant"
+
+clustering_data <- clustering_data %>%
+  mutate(clusters = case_when(
+    is.na(clusters) ~ "Insignificant",
+    TRUE ~ as.factor(clusters)))
+
+clustering_data$clusters <- factor(clustering_data$clusters, levels=c("Low-Low","Low-High","High-Low","High-High","Insignificant"))
+           
+# LH and HL are coded as "Insignificant" here - we aren't interested in these
+clustering_data <- clustering_data %>%
+  mutate(clusters_HH_LL = case_when(
+    clusters == "Low-Low" ~ "Low-Low",
+    clusters == "High-High" ~ "High-High",
+    TRUE ~ NA_character_
+  ))
+```
+
+```{r Figure 4 - LISA clusters}
+# na.show=FALSE prevents insignificant entries (which we coded as NA) from being plotted! 
+LISA_map <- tm_shape(clustering_data) + tm_polygons("clusters_HH_LL", fill.scale = tm_scale_categorical(values = c("red", "blue")), col_alpha=0, tm_legend(title="Clusters", na.show = FALSE, frame=FALSE, title.size=1.2, text.size=1)) + tm_borders(lwd=0.1) +  tm_layout(frame=FALSE) + tm_title(text = "")
+
+LISA_map
+```
+
+
+# Linear regression code
+Here we need to use `cleaned_data_reduced` because we don't want to work with the multipolygon dataframe. 
+
+```{r Yeo-Johnson transform; fitting linear regression and Variance Inflation Factors}
+# data for our model (remove geometry attribute) 
+model_data <- clustering_data %>% dplyr::select(PC1, avg_age, carownership_perc, household_median_income, food_walk, BAME_2011_perc, lsoa_code)
+
+my_recipe <- recipe(PC1~., data = model_data %>% dplyr::select(-geometry)) %>% 
+  update_role(lsoa_code, new_role = "ID variable") %>%
+  update_role(geometry, new_role = "ID variable") %>%
+  step_center(all_numeric_predictors()) %>% 
+  step_scale(all_numeric_predictors()) %>% 
+  step_YeoJohnson(PC1) 
+
+# Extract the corresponding lambda value for yeo-johnson transform
+lambda_yj <- prep(my_recipe)$steps[[3]]$lambdas
+cat("The optimal lambda value for Yeo-Johnson is", lambda_yj, "\n")
+
+# Prep applies the transforms to the data; juice extracts the preprocessed data; convert back to sf object
+model_data_transformed <- prep(my_recipe) %>% 
+  juice() 
+
+# PC1 has been transformed within "model_data_transformed"
+linear_model <- lm(PC1~., data=model_data_transformed %>% dplyr::select(-geometry,-lsoa_code))
+
+# Check collinearity with variance inflation factors (VIFs)
+car::vif(lm_model) 
+```
+
+### Supp figures: transformed PC1 and linear regression assumption checking
+
+```{r supp figures - transformed PC1 and assumption checking}
+# orignial PC1
+ggplot(model_data, aes(x = PC1)) +
+  geom_histogram(fill = "lightblue", color = "black") +
+  labs(title = "Original data (before YJ transform)", x = "PC1", y = "Frequency")
+
+# transformed PC1
+ggplot(prepared_data, aes(x = PC1)) +
+  geom_histogram(fill = "lightblue", color = "black") +
+  labs(title = "Transformed data (after YJ transform)", x = "PC1 (transformed)", y = "Frequency")
+
+# linear regression assumption checking plots
+par(mfrow = c(2, 2))
+plot(lm_model, cex=0.2)
+```
+
+### Linear regression residuals visualisation
+```{r Visualising clustering of linear regression residuals}
+# extract the residuals from the lm object and put it into our clustering data tibble
+clustering_data$linear_model_residuals <- residuals(linear_model)
+
+# Compute Global Moran's I for linear model residuals; same weights as defined earlier 
+gmi_residuals <- moran.test(clustering_data$linear_model_residuals, weights)
+
+# Compute Local Moran's I for linear model residuals
+lisa_residuals <- localmoran(clustering_data$linear_model_residuals, weights)
+summary(lisa_residuals)
+
+# significance as defined above; 
+clustering_data$clusters_residuals <- attributes(lisa_residuals)$quadr$mean
+clustering_data$clusters_residuals[lisa[ ,5] > significance] <- "Insignificant"
+
+# clustering of linear model residuals
+tm_shape(clustering_data) + tm_polygons("clusters_residuals", fill.scale = tm_scale_categorical(values = c("blue", "lightblue", "coral", "red","grey")), col_alpha=0, tm_legend(title="Clusters", na.show = FALSE, frame=FALSE, title.size=1.2, text.size=1)) + tm_borders(lwd=0.1) +  tm_layout(frame=FALSE) + tm_title(text = "")
+```
+
+# Geographically weighted regression (GWR)
+
+We can't work with the `prepared_data` tibble from the previous section since we need the additional geometry attribute. We need to work with a multipolygon dataframe, so we firstly re-apply the yeo-johnson transform (with optimal $$\lambda$$ that was found earlier) on PC1 before fitting the GWR with the `XYZ` dataframe. 
+
+We need to use our `model_data_transformed` but convert back to sf object
+
+```{r}
+gwr_data <- model_data_transformed %>% st_as_sf()
+
+# define a new PC1_yj2 which subtracts the intercept term from the previous backward selection model: 
+gwr_data$PC1_yj2 <- gwr_data$PC1 + 0.145804
+
+gwr_formula <- "PC1_yj2 ~ household_median_income + avg_age + food_walk + carownership_perc + BAME_2011_perc -1"
+
+# Convert data to SP (Spatial Polygons Data Frame) so that it is in correct format for GWR
+
+# centroids of the gwr_data sf object using st_centroid
+centroids <- st_centroid(gwr_data)
+centroid_coords <- st_coordinates(centroids)
+dist_matrix_centroids <- as.matrix(dist(centroid_coords))
+
+gwr_data_sp <- as(gwr_data, "Spatial") 
+
+# Finds a bandwidth for a given gwr by optimising AICc
+gwr_bw <- bw.gwr(gwr_formula, data = gwr_data_sp, kernel = "bisquare", approach = "AICc", adaptive = TRUE, dMat=dist_matrix_centroids)
+
+# Fit the GWR
+gwr_fit <- gwr.basic(gwr_formula, bw=gwr_bw, kernel="bisquare", adaptive=TRUE, dMat = dist_matrix_centroids, data=gwr_data_sp)
+
+# Now let's join the results of GWR (local R2, local coefficients) to our dataframe (clustering_data?)
+gwr_data <- gwr_data %>%
+  mutate(gwr_income =  gwr_fit$SDF$household_median_income,
+         gwr_income_t = gwr_fit$SDF$household_median_income_TV,
+         gwr_foodwalk = gwr_fit$SDF$food_walk,
+         gwr_foodwalk_t = gwr_fit$SDF$food_walk_TV,
+         gwr_BAME = gwr_fit$SDF$BAME_2011_perc,
+         gwr_BAME_t = gwr_fit$SDF$BAME_2011_perc_TV,
+         gwr_carownership = gwr_fit$SDF$carownership_perc,
+         gwr_carownership_t = gwr_fit$SDF$carownership_perc_TV,
+         gwr_age = gwr_fit$SDF$avg_age,
+         gwr_age_t = gwr_fit$SDF$avg_age_TV,
+         gwr_localr2 = gwr_fit$SDF$Local_R2,
+         y_hat = gwr_fit$SDF$yhat,
+         gwr_residuals = gwr_fit$SDF$residual,
+         gwr_residuals_abs = abs(gwr_fit$SDF$residual),
+         lm_hat = gwr_fit$lm$fitted.values)
+```
+
+Verifying the coordinates of polygon centroids, etc.
+```{r, eval=FALSE}
+# Extract polygons from the SpatialPolygonsDataFrame
+polygons_list <- gwr_data_sp@polygons
+
+# Extract labpt from each polygon
+labpt_list <- lapply(polygons_list, function(poly) {
+  labpt <- poly@labpt
+  return(labpt)
+})
+
+# Convert list to matrix
+labpt_matrix <- do.call(rbind, labpt_list)
+
+# Calculate centroids
+centroids <- st_centroid(gwr_data)
+# Extract centroid coordinates
+centroid_coords <- st_coordinates(centroids)
+
+# Function to compare two matrices with tolerance
+compare_matrices <- function(mat1, mat2, tol = 1e-8) {
+  if (all(abs(mat1 - mat2) < tol)) {
+    return(TRUE)
+  } else {
+    return(FALSE)
+  }
+}
+
+# Compare labpt and centroid coordinates
+are_equal <- compare_matrices(labpt_matrix, centroid_coords)
+```
+
+
+## Visualising GWR Coefficients
+
+We can visualise our coefficients for the fitted GWR model, $\beta=(\beta_1,\beta_2,\beta_3,\beta_4,\beta_5)$. 
+```{r}
+# Append our High-High clusters from previously for visualisation 
+gwr_data <- gwr_data %>%
+  left_join(clustering_data %>% st_drop_geometry() %>% select(clusters, lsoa_code), by = "lsoa_code")
+
+# we define a constant lower and upper bound for the colour bars 
+upper <- gwr_fit$SDF %>% st_as_sf() %>% as_tibble() %>% dplyr::select(c(household_median_income,avg_age,food_walk,carownership_perc,BAME_2011_perc)) %>% max
+
+lower <- gwr_fit$SDF %>% st_as_sf() %>% as_tibble() %>% dplyr::select(c(household_median_income,avg_age,food_walk,carownership_perc,BAME_2011_perc)) %>% min
+
+
+tm_shape(gwr_data)+tm_polygons(fill="gwr_income", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_income_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + 
+  tm_layout(frame=FALSE, legend.text.size = 1, legend.reverse=TRUE) + tm_title("")
+
+tm_shape(gwr_data)+tm_polygons(fill="gwr_foodwalk", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_foodwalk_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size = 1, legend.reverse=TRUE) + tm_title("")
+
+tm_shape(gwr_data)+tm_polygons(fill="gwr_BAME", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_BAME_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size = 1, legend.reverse=TRUE) + tm_title("")
+
+tm_shape(gwr_data)+tm_polygons(fill="gwr_age", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_age_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size=1, legend.reverse=TRUE) + tm_title("")
+
+tm_shape(gwr_data)+tm_polygons(fill="gwr_carownership", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_carownership_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size=1, legend.reverse=TRUE) + tm_title("")
+```
+
+## Local R Squared (Figure 6)
+```{r Figure 6}
+# for colour bar purposes, define min and max
+min_r2 <- min(gwr_data$gwr_localr2)
+max_r2 <- max(gwr_data$gwr_localr2)
+
+tm_shape(gwr_data) + tm_polygons("gwr_localr2", fill.scale=tm_scale_continuous(values="Teal", limits=c(min_r2,max_r2)), col_alpha=0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(clusters == "High-High")) + tm_borders(col="white", lwd=0.5) + tm_layout(frame=FALSE, legend.text.size=1, legend.reverse=TRUE) + tm_title("") 
+```
+
+# Most Influential Predictor (MIP)
+
+This part also quantifies MIP as the predictor with the highest absolute beta value, but it has been written much neater down below. 
+
+## Contribution plots 
+
+We calculate the contribution of each local predictor to the prediction of transformed PC1.
+
+Calculate $$ C=\beta X$$ where the columns of $\beta$ are the local GWR model coefficient values, and $X$ are the column of predictor values.
+```{r calculate contribution terms X*beta}
+BETA <- gwr_fit$SDF %>% st_as_sf() %>% as_tibble() %>% dplyr::select(c(avg_age,BAME_2011_perc,carownership_perc,food_walk,household_median_income))
+
+X <- gwr_fit$lm$model %>% as_tibble %>% dplyr::select(c(avg_age,BAME_2011_perc,carownership_perc,food_walk,household_median_income))
+
+C <- BETA*X %>% as_tibble 
+C <- C %>%
+  rowwise() %>%
+  mutate(row_sum = sum(abs(c_across(everything())))) %>%
+  ungroup()
+
+c1 <- C %>% dplyr::select(-row_sum) %>% min
+c2 <- C %>% dplyr::select(-row_sum) %>% max
+
+# without intercept
+colnames(C) <- c("C.avg_age","C.BAME_2011_perc","C.carownership","C.food_walk", "C.household_median_income", "row_sum") 
+
+# CHANGE TO abs(C) to use |beta*X| instead of beta*X
+contribution_data <- bind_cols(gwr_data, C)
+```
+
+## Visualise contributions
+```{r Figure 7 column ii}
+tm_shape(contribution_data)+tm_polygons(fill="C.household_median_income", fill.scale = tm_scale_continuous(values="-PRGn",limits=c(c1,c2)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_income_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
+
+tm_shape(contribution_data)+tm_polygons(fill="C.avg_age", fill.scale = tm_scale_continuous(values="-PRGn",limits=c(c1,c2)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_income_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
+
+tm_shape(contribution_data)+tm_polygons(fill="C.food_walk", fill.scale = tm_scale_continuous(values="-PRGn",limits=c(c1,c2)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_income_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
+
+tm_shape(contribution_data)+tm_polygons(fill="C.carownership", fill.scale = tm_scale_continuous(values="-PRGn",limits=c(c1,c2)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_income_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
+
+tm_shape(contribution_data)+tm_polygons(fill="C.BAME_2011_perc", fill.scale = tm_scale_continuous(values="-PRGn",limits=c(c1,c2)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_income_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
+```
+
+
+## Quantifying the most important predictor using the contribution score
+To quantify which predictor has the most "explanatory power", or the "largest contribution", or is the "most important" in predicting our local PC1 score, we use the contribution matrix from above. The "most important local predictor" is the one that has the largest magnitude of contribution $|\beta_i x_i|$ to the GWR model for its corresponding LSOA, $i$. 
+
+```{r}
+# For beta*X 
+contribution_data_long <- pivot_longer(contribution_data, cols=c("C.avg_age","C.BAME_2011_perc","C.carownership", "C.food_walk","C.household_median_income"), names_to = "contributor", values_to = "contributor_values") 
+
+
+# 29/01/25 update: we add the condition that we first must filter out the variables for which the beta term is not significant
+# We must create two dataframes C. and T. and then combine them after the fact 
+
+t_values_long <- pivot_longer(gwr_data, cols=c("gwr_age_t","gwr_BAME_t","gwr_carownership_t","gwr_foodwalk_t", "gwr_income_t"), names_to = "t_predictor", values_to = "t_values") 
+
+t_values_long = st_set_geometry(t_values_long, NULL) #removes geometry attribute
+# 
+contribution_data_long <- contribution_data_long %>%
+  mutate(t_values = t_values_long$t_values,
+         t_predictor = t_values_long$t_predictor,
+         lsoa_codet = t_values_long$lsoa_code)
+
+# here we could do a check to ensure lsoa_code==lsoa_codet for every row 
+
+contribution_data_long <- contribution_data_long %>%
+  group_by(lsoa_code) %>%
+  mutate(
+    # Filter out rows where abs(t_values) <= 1.96 and contribution is negative 
+    valid_rows = abs(t_values) > 1.96 & contributor_values > 0,
+    
+    # Arrange by contributor_values within valid rows and get the first (maximum)
+    most_important = ifelse(
+      any(valid_rows),  # If there are any valid rows (abs(t_values) > 1.96)
+      first(contributor[valid_rows][order(-contributor_values[valid_rows])]),  # Select max contributor_value
+      NA_character_  # If no rows meet the condition, set most_important to NA
+    )
+  ) %>%
+  ungroup()
+
+
+
+
+test_lsoa <- contribution_data_long %>% filter(lsoa_code == "E01001412") %>% dplyr::select(lsoa_code,contributor,contributor_values,t_predictor,t_values)
+
+test_lsoa <- test_lsoa %>%
+  group_by(lsoa_code) %>%
+  mutate(
+    # Filter out rows where abs(t_values) <= 1.96 and contribution is negative 
+    valid_rows = (abs(t_values) > 1.96) & (contributor_values > 0),
+    
+    # Arrange by contributor_values within valid rows and get the first (maximum)
+    most_important = ifelse(
+      any(valid_rows),  # If there are any valid rows (abs(t_values) > 1.96)
+      first(contributor[valid_rows][order(-contributor_values[valid_rows])]),  # Select max contributor_value
+      NA_character_  # If no rows meet the condition, set most_important to NA
+    )
+  ) %>%
+  ungroup()
+```
+
+## Figure 8
+```{r Figure 8}
+contribution_data_long <- contribution_data_long %>% 
+  mutate(alpha_fd = if_else(
+    clusters=="High-High", 1, 0, missing=0))
+
+contribution_data_long$alpha_fd <- as.factor(contribution_data_long$alpha_fd)
+
+
+my_palette  <- c("#F0E442", "#56B4E9", "#009E73", "#CC79A7", "#E69F00", "#0072B2", "#D55E00", "#999999")
+my_palette <- c('#ffffb3','#8dd3c7','#80b1d3','#bebada','#fb8072')
+
+my_colours <- c("#F4F1DE","#E07A5F","#6C709D","#81B29A","#F2CC8F")
+
+my_colours <- my_colours <- c('#2c7bb6', '#ffffbf','#abd9e9', '#fdae61', '#d7191d')
+
+
+
+tm_shape(contribution_data_long %>% filter(alpha_fd == 0)) + tm_fill("most_important", alpha=0.1, title = "", palette="Set2", legend.show=FALSE) + tm_layout(frame=FALSE) + tm_shape(contribution_data_long %>% filter(alpha_fd == 1)) + tm_fill("most_important", title="", palette="Set2", labels=c("Age","BAME (%)","Car ownership (%)", "Walk time", "Income")) + tm_legend(frame=FALSE, text.size=0.9)
+```
+
+
+## Figure 10 (appendix)
+Here we categorise the most influential predictor for food oasis areas. Instead of categorising it as the variable maximum positive contribution to the prediction of PC1, we categorise it as the variable with the maximum NEGATIVE contribution to the prediction of PC1. 
+```{r Figure 10}
+contribution_data_long <- contribution_data_long %>%
+  group_by(lsoa_code) %>%
+  mutate(
+    # Filter out rows where abs(t_values) <= 1.96 and contribution is negative 
+    valid_rows_fo = abs(t_values) > 1.96 & contributor_values < 0,
+    
+    # Arrange by contributor_values within valid rows and get the LAST (smallest; but largest absolute negative)
+    most_important_fo = ifelse(
+      any(valid_rows_fo),  # If there are any valid rows (abs(t_values) > 1.96)
+      last(contributor[valid_rows_fo][order(-contributor_values[valid_rows_fo])]),  # Select max contributor_value
+      NA_character_  # If no rows meet the condition, set most_important to NA
+    )
+  ) %>%
+  ungroup()
+
+
+test_lsoa <- contribution_data_long %>% filter(lsoa_code == "E01000136") %>% dplyr::select(lsoa_code,contributor,contributor_values,t_predictor,t_values)
+
+test_lsoa <- test_lsoa %>%
+  group_by(lsoa_code) %>%
+  mutate(
+    # Filter out rows where abs(t_values) <= 1.96 and contribution is negative 
+    valid_rows_fo = (abs(t_values) > 1.96) & (contributor_values < 0),
+    
+    # Arrange by contributor_values within valid rows and get the LAST (i.e. SMALLEST because we are dealing with negatives!)
+    most_important_fo = ifelse(
+      any(valid_rows_fo),  # If there are any valid rows (abs(t_values) > 1.96)
+      last(contributor[valid_rows_fo][order(-contributor_values[valid_rows_fo])]),  # Select max contributor_value
+      NA_character_  # If no rows meet the condition, set most_important to NA
+    )
+  ) %>%
+  ungroup()
+
+contribution_data_long <- contribution_data_long %>% 
+  mutate(alpha_fo = if_else(
+    clusters=="Low-Low", 1, 0, missing=0))
+
+contribution_data_long$alpha_fo <- as.factor(contribution_data_long$alpha_fo)
+
+tm_shape(contribution_data_long %>% filter(alpha_fo == 0)) + tm_fill("most_important_fo", alpha=0.1, title = "", palette="Set2", legend.show=FALSE) + tm_layout(frame=FALSE) + tm_shape(contribution_data_long %>% filter(alpha_fo == 1)) + tm_fill("most_important_fo", title="", palette="Set2", labels=c("Age","BAME (%)","Car ownership (%)", "Walk time", "Income"), title="") + tm_legend(frame=FALSE, text.size=0.9)
+```
+
+
+### Appendix: Bandwidth plots
+Let's try to make a map which highlights a bandwidth, as an example:
+```{r}
+# convert SP object to SF
+gwr_data_sf <- st_as_sf(gwr_data_sp)
+
+# select a polygon (e.g., the first one)
+# for centre figure use polygon index 550
+# for Thames figure use polygon index 3015
+# for edge case use polygon index 58
+
+selected_polygon_index <- 50
+selected_polygon <- gwr_data_sf[selected_polygon_index, ]
+
+# extract centroids of the polygons
+centroids <- st_centroid(gwr_data_sf)
+
+# calculate distances between the centroids (use st_distance for sf objects)
+dist_matrix <- st_distance(centroids)
+
+# find the 72 nearest polygons (excluding the selected polygon itself)
+nearest_indices <- order(dist_matrix[selected_polygon_index, ])[2:73]
+
+# create a new column to label the nearest polygons
+model_data_sf$category <- "outer"  # Default to outer areas
+model_data_sf$category[selected_polygon_index] <- "centre"  # Mark the central polygon
+model_data_sf$category[nearest_indices] <- "nearest"  # Mark the nearest polygons
+
+# create the map
+tm_shape(model_data_sf) + 
+  tm_fill("category", palette = c("centre"="black", "nearest"="red", "outer"="white"), alpha = 0.8) + tm_layout(frame = FALSE, legend.show = FALSE) + tm_borders("black", lwd = 0.3)
+
+```
+
+
+
+

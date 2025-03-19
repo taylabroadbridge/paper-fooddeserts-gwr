@@ -1,0 +1,6 @@
+"0","# Plot the transformed response variable"
+"0","ggplot(prepared_data, aes(x = PC1)) +"
+"0","  geom_histogram(fill = ""lightblue"", color = ""black"") +"
+"0","  labs(title = ""Transformed Data (After Yeo-Johnson Transformation)"", x = ""PC1 (Transformed)"", y = ""Frequency"")"
+"1","[38;5;232m`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.[39m
+"

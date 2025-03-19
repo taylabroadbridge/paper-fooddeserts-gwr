@@ -1,0 +1,27 @@
+{
+    "id": "B0F245A4",
+    "path": "~/Documents/paper-fooddeserts-gwr/data/lsoa-data-cleaning-script.R",
+    "project_path": "data/lsoa-data-cleaning-script.R",
+    "type": "r_source",
+    "hash": "3248193123",
+    "contents": "",
+    "dirty": false,
+    "created": 1739150732753.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "10,46",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1741843449,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1741843449430,
+    "read_only": false,
+    "read_only_alternatives": []
+}

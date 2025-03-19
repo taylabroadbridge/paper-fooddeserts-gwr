@@ -1,0 +1,11 @@
+"0","# Now let's also just plot the raw backward model residuals on a map too"
+"0","# *****The colour bar on this map needs to be fixed!*****"
+"0",""
+"0","map_bwresiduals <- tm_shape(clustering_data) + "
+"0","  tm_fill(""bw_model_residuals"", style=""cont"", title=""Residual"", palette = ""-RdBu"") + #breaks = c(-5.330987,0, 9.599679)) + # or use breaks c(-6.314342,7.692272) to compare against PC1_yj"
+"0","  tm_layout(frame = FALSE) + tm_title(""OLS model residuals"")  # Adjust these values according to your data range"
+"2","Deprecated tmap v3 code detected. Code translated to v4
+"
+"0","map_bwresiduals"
+"2","Variable(s) ""fill"" contains positive and negative values, so midpoint is set to 0. Set midpoint = NA to show the full range of visual values.
+"

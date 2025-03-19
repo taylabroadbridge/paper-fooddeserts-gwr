@@ -1,0 +1,1 @@
+{"frames":[{"func":"st_as_sf(gwr_data_sp)","file":"","line_number":0,"end_line_number":0,"character_number":0,"end_character_number":0}],"message":"Error in st_as_sf(gwr_data_sp) : object 'gwr_data_sp' not found\n"}

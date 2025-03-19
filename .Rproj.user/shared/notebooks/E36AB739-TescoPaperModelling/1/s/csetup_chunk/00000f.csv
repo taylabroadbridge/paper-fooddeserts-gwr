@@ -1,0 +1,6 @@
+"0","knitr::opts_chunk$set(echo = FALSE, warning = FALSE)"
+"0","pacman::p_load("
+"0","  tidyverse, tidymodels, broom, tidytext, AppliedPredictiveModeling, skimr, janitor, corrplot, vip, dplyr, readr, ranger,"
+"0","  randomForest,sf,tmap,readxl,paletteer,ggcorrplot,glmnet,leaps,caret,gam,MASS,mgcv,car,olsrr,spdep,rgdal,naniar,spgwr, here"
+"0","  #regoda,"
+"0",")"

@@ -1,0 +1,2 @@
+"0","# Step 7: Create the map using tmap"
+"0","#tm_shape(model_data_sf) + tm_fill(""nearest"", palette=c(""white"", ""red""), alpha=0.8) + tm_layout(frame=FALSE,legend.show=FALSE)+ tm_borders(""black"", lwd=0.3)  "

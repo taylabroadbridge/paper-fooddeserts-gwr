@@ -1,0 +1,3 @@
+"0","# Making subset of data called ""model data"" which only includes our variables of interest in the linear model + geometry (which we need for GWR)"
+"0",""
+"0","model_data <- as_tibble(london_data) %>% dplyr::select(PC1, avg_age, households_with_cars, food_pt, qualifications_2011_perc, household_median_income_2011, food_walk, BAME_2011_perc) %>% dplyr::select(-qualifications_2011_perc, -food_pt)"

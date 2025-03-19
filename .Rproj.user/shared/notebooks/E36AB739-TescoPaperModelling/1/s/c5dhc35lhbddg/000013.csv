@@ -1,0 +1,7 @@
+"0",""
+"0","# Plotting PC1 against PC2"
+"0","pca_plot <-"
+"0","  juice(fcategory_recipe) %>%"
+"0","  ggplot(aes(PC1, PC2)) +"
+"0","  geom_point(color=""#808080"") + theme_bw() "
+"0","pca_plot"

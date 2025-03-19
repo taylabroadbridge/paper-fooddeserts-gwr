@@ -1,0 +1,1 @@
+"0","modelling_data <- london_data %>% dplyr::select(lsoa_name, lsoa_code, la_name, la_code, household_median_income_2011,BAME_2011_perc, households_with_cars, qualifications_2011_perc, food_walk, avg_age)"

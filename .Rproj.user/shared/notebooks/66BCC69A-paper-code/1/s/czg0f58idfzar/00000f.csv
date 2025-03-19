@@ -1,0 +1,4 @@
+"0","# convert SP object to SF"
+"0","gwr_data_sf <- st_as_sf(gwr_data_sp)"
+"2","Error in st_as_sf(gwr_data_sp) : object 'gwr_data_sp' not found
+"

@@ -1,0 +1,6 @@
+"0","cleaned_data_reduced <- cleaned_data %>%"
+"0","  filter(la_name %in% c(""Newham"", ""Tower Hamlets"", ""Hackney"", ""Islington"", ""Lewisham"", "
+"0","                        ""Southwark"", ""Lambeth"", ""Wandsworth"", ""Camden"", ""Haringey"", "
+"0","                        ""City of London"", ""Westminster"", ""Kensington and Chelsea"", "
+"0","                        ""Hammersmith and Fulham"", ""Enfield"", ""Redbridge"", ""Waltham Forest"", "
+"0","                        ""Barnet"", ""Brent"", ""Harrow"", ""Greenwich"", ""Ealing"", ""Barking and Dagenham""))"
