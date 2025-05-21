@@ -160,6 +160,8 @@ map_carownership <- tm_shape(na.omit(london_polygon)) + tm_polygons("carownershi
 
 # plot age
 map_age <- tm_shape(na.omit(london_polygon)) + tm_polygons("avg_age", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse = TRUE)
+
+tmap_arrange(map_income, map_carownership, map_BAME, map_age, nrow=4)
 ```
 
 
