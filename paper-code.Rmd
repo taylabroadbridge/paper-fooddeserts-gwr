@@ -7,7 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-pacman::p_load(tidyverse, tidymodels, dplyr, readr, sf, spdep, tmap, readxl, here, GWmodel)
+pacman::p_load(tidyverse, tidymodels, dplyr, readr, sf, spdep, tmap, readxl, here, GWmodel, RColorBrewer)
 ```
 
 ```{r read in data}
@@ -125,18 +125,19 @@ pc_upper <- max(na.omit(london_polygon)$PC1)
 
 map_pc1 <- tm_shape(na.omit(london_polygon)) + 
   tm_polygons("PC1", 
-              fill.scale = tm_scale_continuous(values = "-RdBu", limits = c(pc_lower, pc_upper)),
+              fill.scale = tm_scale_continuous(values = "-brewer.rd_bu", limits = c(pc_lower, pc_upper)),
               col_alpha = 0, 
               tm_legend(title = "", frame = FALSE, limits = c(pc_lower, pc_upper))) +
-  tm_borders(lwd = 0) + 
+  #tm_borders(lwd = 0) + 
   tm_layout(
     frame = FALSE, 
     legend.reverse = TRUE, 
-    legend.is.portrait = TRUE, 
-    legend.text.size = 0.8, 
-    legend.height = 20
+    #legend.is.portrait = TRUE, 
+    legend.text.size = 1.4, 
+    legend.height = 30
   ) + 
   tm_title("")
+map_pc1
 
 ```
 
@@ -209,7 +210,18 @@ clustering_data <- clustering_data %>%
 
 ```{r Figure 4 - LISA clusters}
 # na.show=FALSE prevents insignificant entries (which we coded as NA) from being plotted! 
-LISA_map <- tm_shape(clustering_data) + tm_polygons("clusters_HH_LL", fill.scale = tm_scale_categorical(values = c("red", "blue")), col_alpha=0, tm_legend(title="Clusters", na.show = FALSE, frame=FALSE, title.size=1.2, text.size=1)) + tm_borders(lwd=0.1) +  tm_layout(frame=FALSE) + tm_title(text = "")
+LISA_map <- tm_shape(clustering_data) +
+  tm_polygons("clusters_HH_LL",
+              fill.scale = tm_scale_categorical(
+                values = c("red", "blue"),
+                labels = c("Hot Spot", "Cold Spot")
+              ),
+              col_alpha = 0,
+              fill.legend = tm_legend(title = "", frame = FALSE, na.show = FALSE, title.size = 1.2, text.size = 1)) +
+  tm_borders(lwd = 0.1) +
+  tm_layout(frame = FALSE) +
+  tm_title(text = "")
+
 
 LISA_map
 ```
@@ -243,6 +255,7 @@ linear_model <- lm(PC1~., data=model_data_transformed %>% dplyr::select(-geometr
 # Check collinearity with variance inflation factors (VIFs)
 car::vif(linear_model) 
 ```
+
 
 ### Supp figures: transformed PC1 and linear regression assumption checking
 
@@ -350,6 +363,80 @@ tm_shape(gwr_data)+tm_polygons(fill="gwr_age", fill.scale = tm_scale_continuous(
 tm_shape(gwr_data)+tm_polygons(fill="gwr_carownership", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_carownership_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size=1, legend.reverse=TRUE) + tm_title("")
 ```
 
+## Figure 7 - facet
+```{r}
+# combine maps into single figure 
+#recreate plots here with common layout applied
+common_layout <- tm_layout(
+  frame = FALSE,
+  legend.position = "right",
+  legend.outside = FALSE,
+  outer.margins = c(0, 0, 0, 0),
+  legend.text.size = 1,
+  legend.title.size = 1,
+  asp = 0
+)
+
+
+# Choropleth maps (left column)
+map_income <- tm_shape(na.omit(london_polygon)) +
+  tm_polygons("household_median_income_thousands", palette = "brewer.purples", col_alpha = 0,
+              legend.title = "", legend.frame = FALSE)
+
+map_BAME <- tm_shape(na.omit(london_polygon)) +
+  tm_polygons("BAME_2011_perc", palette = "Purples", col_alpha = 0,
+              legend.title = "", legend.frame = FALSE)
+
+map_carownership <- tm_shape(na.omit(london_polygon)) +
+  tm_polygons("carownership_perc", palette = "Purples", col_alpha = 0,
+              legend.title = "", legend.frame = FALSE) +
+  common_layout
+
+map_age <- tm_shape(na.omit(london_polygon)) +
+  tm_polygons("avg_age", palette = "Purples", col_alpha = 0,
+              legend.title = "", legend.frame = FALSE) +
+  common_layout
+
+
+# GWR maps (right column)
+gwr_income_map <- tm_shape(gwr_data) +
+  tm_polygons("gwr_income", palette = "-PRGn", col_alpha = 0,
+              legend.title = "", legend.frame = FALSE,
+              style = "cont") +
+  tm_shape(gwr_data %>% filter(abs(gwr_income_t) > 1.96 & clusters == "High-High")) +
+  tm_borders(col = "black", lwd = 0.25) +
+  common_layout
+
+gwr_BAME_map <- tm_shape(gwr_data) +
+  tm_polygons("gwr_BAME", palette = "-PRGn", col_alpha = 0,
+              legend.title = "", legend.frame = FALSE,
+              style = "cont") +
+  tm_shape(gwr_data %>% filter(abs(gwr_BAME_t) > 1.96 & clusters == "High-High")) +
+  tm_borders(col = "black", lwd = 0.25) +
+  common_layout
+
+gwr_carownership_map <- tm_shape(gwr_data) +
+  tm_polygons("gwr_carownership", palette = "-PRGn", col_alpha = 0,
+              legend.title = "", legend.frame = FALSE,
+              style = "cont") +
+  tm_shape(gwr_data %>% filter(abs(gwr_carownership_t) > 1.96 & clusters == "High-High")) +
+  tm_borders(col = "black", lwd = 0.25) +
+  common_layout
+
+gwr_age_map <- tm_shape(gwr_data) +
+  tm_polygons("gwr_age", palette = "-PRGn", col_alpha = 0,
+              legend.title = "", legend.frame = FALSE,
+              style = "cont") +
+  tm_shape(gwr_data %>% filter(abs(gwr_age_t) > 1.96 & clusters == "High-High")) +
+  tm_borders(col = "black", lwd = 0.25) +
+  common_layout
+
+# Arrange 8 maps in 2 columns × 4 rows
+#...
+
+
+```
+
 ## Local R Squared (Figure 6)
 ```{r Figure 6}
 # for colour bar purposes, define min and max
@@ -443,7 +530,35 @@ contribution_data_long <- contribution_data_long %>%
 contribution_data_long$alpha_fd <- as.factor(contribution_data_long$alpha_fd)
 
 
-tm_shape(contribution_data_long %>% filter(alpha_fd == 0)) + tm_fill("most_important", alpha=0.1, title = "", palette="Set2", legend.show=FALSE) + tm_layout(frame=FALSE) + tm_shape(contribution_data_long %>% filter(alpha_fd == 1)) + tm_fill("most_important", title="", palette="Set2", labels=c("Age","BAME","Car ownership", "Walk time", "Income")) + tm_legend(frame=FALSE, text.size=0.9)
+
+# Define palette and label mappings
+pal_colours <- brewer.pal(5, "Set2")
+value_order <- c("C.avg_age", "C.BAME_2011_perc", "C.carownership", "C.food_walk", "C.household_median_income")
+label_order <- c("Age", "BAME", "Car ownership", "Walk time", "Income")
+
+tm_shape(contribution_data_long %>% filter(alpha_fd == 0)) +
+  tm_polygons("most_important",
+              fill.scale = tm_scale_categorical(
+                values = setNames(pal_colours, value_order),
+                label.na = "Insignificant"
+              ),
+              fill_alpha = 0.1,
+              fill.legend = tm_legend_hide(),
+              lwd = 0,
+              col_alpha = 0
+  ) +
+tm_shape(contribution_data_long %>% filter(alpha_fd == 1)) +
+  tm_polygons("most_important",
+              fill.scale = tm_scale_categorical(
+                values = setNames(pal_colours, value_order),
+                labels = setNames(label_order, value_order),
+                label.na = "Insignificant"
+              ),
+              fill.legend = tm_legend(title = "", frame = FALSE),
+              lwd = 0,
+              col_alpha = 0
+  ) +
+tm_layout(frame = FALSE, legend.frame = FALSE, legend.text.size=1.2)
 ```
 
 
@@ -471,7 +586,70 @@ contribution_data_long <- contribution_data_long %>%
 
 contribution_data_long$alpha_fo <- as.factor(contribution_data_long$alpha_fo)
 
-tm_shape(contribution_data_long %>% filter(alpha_fo == 0)) + tm_fill("most_important_fo", alpha=0.1, title = "", palette="Set2", legend.show=FALSE) + tm_layout(frame=FALSE) + tm_shape(contribution_data_long %>% filter(alpha_fo == 1)) + tm_fill("most_important_fo", title="", palette="Set2", labels=c("Age","BAME","Car ownership", "Walk time", "Income"), title="") + tm_legend(frame=FALSE, text.size=0.9)
+
+
+# Most Influential Predictor
+tm_shape(contribution_data_long %>% filter(alpha_fo == 0)) +
+  tm_polygons("most_important_fo",
+              fill.scale = tm_scale_categorical(
+                values = setNames(pal_colours, value_order),
+                label.na = "Insignificant"
+              ),
+              fill_alpha = 0.1,
+              fill.legend = tm_legend_hide(),
+              lwd = 0,
+              col_alpha = 0
+  ) +
+tm_shape(contribution_data_long %>% filter(alpha_fo == 1)) +
+  tm_polygons("most_important_fo",
+              fill.scale = tm_scale_categorical(
+                values = setNames(pal_colours, value_order),
+                labels = setNames(label_order, value_order),
+                label.na = "Insignificant"
+              ),
+              fill.legend = tm_legend(title = "", frame = FALSE),
+              lwd = 0,
+              col_alpha = 0
+  ) +
+tm_layout(frame = FALSE, legend.frame = FALSE, legend.text.size=1.2)
+
+
+```
+
+```{r}
+
+library(RColorBrewer)
+
+# Define palette and label mappings
+pal_colours <- brewer.pal(5, "Set2")
+value_order <- c("C.avg_age", "C.BAME_2011_perc", "C.carownership", "C.food_walk", "C.household_median_income")
+label_order <- c("Age", "BAME", "Car ownership", "Walk time", "Income")
+
+tm_shape(contribution_data_long %>% filter(alpha_fo == 0)) +
+  tm_polygons("most_important_fo",
+              fill.scale = tm_scale_categorical(
+                values = setNames(pal_colours, value_order),
+                label.na = "Insignificant"
+              ),
+              fill_alpha = 0.1,
+              fill.legend = tm_legend_hide(),
+              lwd = 0,
+              col_alpha = 0
+  ) +
+tm_shape(contribution_data_long %>% filter(alpha_fo == 1)) +
+  tm_polygons("most_important_fo",
+              fill.scale = tm_scale_categorical(
+                values = setNames(pal_colours, value_order),
+                labels = setNames(label_order, value_order),
+                label.na = "Insignificant"
+              ),
+              fill.legend = tm_legend(title = "", frame = FALSE),
+              lwd = 0,
+              col_alpha = 0
+  ) +
+tm_layout(frame = FALSE, legend.frame = FALSE)
+
+
 ```
 
 ### Appendix: Bandwidth plots
@@ -504,9 +682,18 @@ gwr_data_sf$category[nearest_indices] <- "nearest"  # mark nearest polygons
 
 # create map
 tm_shape(gwr_data_sf) + 
-  tm_fill("category", palette = c("centre"="black", "nearest"="orange", "outer"="white"), alpha = 0.8) + tm_layout(frame = FALSE, legend.show = FALSE) + tm_borders("black", lwd = 0.3)
+  tm_fill("category", palette = c("centre"="black", "nearest"="orange", "outer"="white"), fill_alpha = 0.8) + tm_layout(frame = FALSE, legend.show = FALSE) + tm_borders("black", lwd = 0.2)
 ```
 
 
+## Representativeness threshold
+```{r representativeness, }
+# create map for Appendix - representativeness 
+tm_shape(gwr_data_sf) + 
+  tm_fill("category", palette = c("centre"="black", "nearest"="orange", "outer"="white"), fill_alpha = 0.8) + tm_layout(frame = FALSE, legend.show = FALSE) + tm_borders("black", lwd = 0.2)
+
+# create map for Appendix - transaction volume 
+
+```
 
 

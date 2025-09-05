@@ -1,3 +1,0 @@
-"0","# read in the tibble (cleaned_data) which was prepared in lsoa-data-cleaning-script.R"
-"0","#cleaned_data <- read_csv()"
-"0","cleaned_data"
