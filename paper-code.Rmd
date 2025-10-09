@@ -125,7 +125,7 @@ pc_upper <- max(na.omit(london_polygon)$PC1)
 
 map_pc1 <- tm_shape(na.omit(london_polygon)) + 
   tm_polygons("PC1", 
-              fill.scale = tm_scale_continuous(values = "-brewer.rd_bu", limits = c(pc_lower, pc_upper)),
+              fill.scale = tm_scale_continuous(values = "-brewer.rd_bu", limits = c(pc_lower, pc_upper), ticks=c(-4,-2,0,2,4,6,8)),
               col_alpha = 0, 
               tm_legend(title = "", frame = FALSE, limits = c(pc_lower, pc_upper))) +
   #tm_borders(lwd = 0) + 
@@ -133,13 +133,14 @@ map_pc1 <- tm_shape(na.omit(london_polygon)) +
     frame = FALSE, 
     legend.reverse = TRUE, 
     #legend.is.portrait = TRUE, 
-    legend.text.size = 1.4, 
-    legend.height = 30
+    legend.text.size = 1.1, 
+    legend.height = 20
   ) + 
   tm_title("")
 map_pc1
 
 ```
+
 
 Cloropeth maps for socio-demographic variables
 ```{r Figure 7 column i}
@@ -148,21 +149,21 @@ Cloropeth maps for socio-demographic variables
 london_polygon <- london_polygon %>%
   mutate(household_median_income_thousands = household_median_income/1000)
 
-map_income <- tm_shape(na.omit(london_polygon)) + tm_polygons("household_median_income_thousands", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1, legend.reverse = TRUE)
+map_income <- tm_shape(na.omit(london_polygon)) + tm_polygons("household_median_income_thousands", tm_scale_continuous(values="brewer.purples",limits=c(10,95)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse = TRUE)
 
 # plot BAME
-map_BAME <- tm_shape(na.omit(london_polygon)) + tm_polygons("BAME_2011_perc", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse=TRUE)
+map_BAME <- tm_shape(na.omit(london_polygon)) + tm_polygons("BAME_2011_perc", tm_scale_continuous(values="brewer.purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse=TRUE)
 
 # plot walk-time
-map_foodwalk <- tm_shape(na.omit(london_polygon)) + tm_polygons("food_walk", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse=TRUE)
+map_foodwalk <- tm_shape(na.omit(london_polygon)) + tm_polygons("food_walk", tm_scale_continuous(values="brewer.purples",limits = c(0, 100)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse=TRUE)
 
 # plot car ownership
-map_carownership <- tm_shape(na.omit(london_polygon)) + tm_polygons("carownership_perc", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse=TRUE)
+map_carownership <- tm_shape(na.omit(london_polygon)) + tm_polygons("carownership_perc", tm_scale_continuous(values="brewer.purples",limits=c(10,98)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse=TRUE)
 
 # plot age
-map_age <- tm_shape(na.omit(london_polygon)) + tm_polygons("avg_age", tm_scale_continuous(values="Purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse = TRUE)
+map_age <- tm_shape(na.omit(london_polygon)) + tm_polygons("avg_age", tm_scale_continuous(values="brewer.purples"), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_layout(frame=FALSE, legend.text.size=1.2, legend.reverse = TRUE)
 
-tmap_arrange(map_income, map_carownership, map_BAME, map_age, nrow=4)
+#tmap_arrange(map_income, map_carownership, map_BAME, map_age, nrow=4)
 ```
 
 
@@ -217,7 +218,7 @@ LISA_map <- tm_shape(clustering_data) +
                 labels = c("Hot Spot", "Cold Spot")
               ),
               col_alpha = 0,
-              fill.legend = tm_legend(title = "", frame = FALSE, na.show = FALSE, title.size = 1.2, text.size = 1)) +
+              fill.legend = tm_legend(title = "", frame = FALSE, na.show = FALSE, title.size = 1.2, text.size = 1, position=c("right","top"))) +
   tm_borders(lwd = 0.1) +
   tm_layout(frame = FALSE) +
   tm_title(text = "")
@@ -351,16 +352,16 @@ upper <- gwr_fit$SDF %>% st_as_sf() %>% as_tibble() %>% dplyr::select(c(househol
 lower <- gwr_fit$SDF %>% st_as_sf() %>% as_tibble() %>% dplyr::select(c(household_median_income,avg_age,food_walk,carownership_perc,BAME_2011_perc)) %>% min
 
 
-tm_shape(gwr_data)+tm_polygons(fill="gwr_income", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_income_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + 
+tm_shape(gwr_data)+tm_polygons(fill="gwr_income", fill.scale = tm_scale_continuous(values="-brewer.prgn", limits=c(lower,upper), ticks=c(-4,-3,-2,-1,0,1,2,3)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_income_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + 
   tm_layout(frame=FALSE, legend.text.size = 1, legend.reverse=TRUE) + tm_title("")
 
-tm_shape(gwr_data)+tm_polygons(fill="gwr_foodwalk", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_foodwalk_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size = 1, legend.reverse=TRUE) + tm_title("")
+tm_shape(gwr_data)+tm_polygons(fill="gwr_foodwalk", fill.scale = tm_scale_continuous(values="-brewer.prgn", limits=c(lower,upper), ticks=c(-4,-3,-2,-1,0,1,2,3)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_foodwalk_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size = 1, legend.reverse=TRUE) + tm_title("")
 
-tm_shape(gwr_data)+tm_polygons(fill="gwr_BAME", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_BAME_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size = 1, legend.reverse=TRUE) + tm_title("")
+tm_shape(gwr_data)+tm_polygons(fill="gwr_BAME", fill.scale = tm_scale_continuous(values="-brewer.prgn", limits=c(lower,upper), ticks=c(-4,-3,-2,-1,0,1,2,3)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_BAME_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size = 1, legend.reverse=TRUE) + tm_title("")
 
-tm_shape(gwr_data)+tm_polygons(fill="gwr_age", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_age_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size=1, legend.reverse=TRUE) + tm_title("")
+tm_shape(gwr_data)+tm_polygons(fill="gwr_age", fill.scale = tm_scale_continuous(values="-brewer.prgn", limits=c(lower,upper),ticks=c(-4,-3,-2,-1,0,1,2,3)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_age_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size=1, legend.reverse=TRUE) + tm_title("")
 
-tm_shape(gwr_data)+tm_polygons(fill="gwr_carownership", fill.scale = tm_scale_continuous(values="-PRGn", limits=c(lower,upper)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_carownership_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size=1, legend.reverse=TRUE) + tm_title("")
+tm_shape(gwr_data)+tm_polygons(fill="gwr_carownership", fill.scale = tm_scale_continuous(values="-brewer.prgn", limits=c(lower,upper),ticks=c(-4,-3,-2,-1,0,1,2,3)), col_alpha = 0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(abs(gwr_carownership_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.25) + tm_layout(frame=FALSE,legend.text.size=1, legend.reverse=TRUE) + tm_title("")
 ```
 
 ## Figure 7 - facet
@@ -443,7 +444,7 @@ gwr_age_map <- tm_shape(gwr_data) +
 min_r2 <- min(gwr_data$gwr_localr2)
 max_r2 <- max(gwr_data$gwr_localr2)
 
-tm_shape(gwr_data) + tm_polygons("gwr_localr2", fill.scale=tm_scale_continuous(values="Teal", limits=c(min_r2,max_r2)), col_alpha=0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(clusters == "High-High")) + tm_borders(col="white", lwd=0.5) + tm_layout(frame=FALSE, legend.text.size=1, legend.reverse=TRUE) + tm_title("") 
+tm_shape(gwr_data) + tm_polygons("gwr_localr2", fill.scale=tm_scale_continuous(values="carto.teal", limits=c(min_r2,max_r2), ticks=c(0.2,0.4,0.6,0.8)), col_alpha=0, tm_legend(title="", frame=FALSE)) + tm_shape(gwr_data %>% filter(clusters == "High-High")) + tm_borders(col="white", lwd=0.5) + tm_layout(frame=FALSE, legend.text.size=1, legend.reverse=TRUE) + tm_title("") 
 ```
 
 # Most Influential Predictor (MIP)
@@ -477,15 +478,15 @@ contribution_data <- bind_cols(gwr_data, C)
 
 ## Visualise contributions
 ```{r Figure 7 column ii}
-tm_shape(contribution_data)+tm_polygons(fill="C.household_median_income", fill.scale = tm_scale_continuous(values="-PRGn",limits=c(c1,c2)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_income_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
+tm_shape(contribution_data)+tm_polygons(fill="C.household_median_income", fill.scale = tm_scale_continuous(values="-brewer.prgn",limits=c(c1,c2), ticks=c(-6,-4,-2,0,2,4)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_income_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
 
-tm_shape(contribution_data)+tm_polygons(fill="C.avg_age", fill.scale = tm_scale_continuous(values="-PRGn",limits=c(c1,c2)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_age_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
+tm_shape(contribution_data)+tm_polygons(fill="C.avg_age", fill.scale = tm_scale_continuous(values="-brewer.prgn",limits=c(c1,c2),ticks=c(-6,-4,-2,0,2,4)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_age_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
 
-tm_shape(contribution_data)+tm_polygons(fill="C.food_walk", fill.scale = tm_scale_continuous(values="-PRGn",limits=c(c1,c2)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_foodwalk_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
+tm_shape(contribution_data)+tm_polygons(fill="C.food_walk", fill.scale = tm_scale_continuous(values="-brewer.prgn",limits=c(c1,c2),ticks=c(-6,-4,-2,0,2,4)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_foodwalk_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
 
-tm_shape(contribution_data)+tm_polygons(fill="C.carownership", fill.scale = tm_scale_continuous(values="-PRGn",limits=c(c1,c2)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_carownership_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
+tm_shape(contribution_data)+tm_polygons(fill="C.carownership", fill.scale = tm_scale_continuous(values="-brewer.prgn",limits=c(c1,c2),ticks=c(-6,-4,-2,0,2,4)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_carownership_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
 
-tm_shape(contribution_data)+tm_polygons(fill="C.BAME_2011_perc", fill.scale = tm_scale_continuous(values="-PRGn",limits=c(c1,c2)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_BAME_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
+tm_shape(contribution_data)+tm_polygons(fill="C.BAME_2011_perc", fill.scale = tm_scale_continuous(values="-brewer.prgn",limits=c(c1,c2),ticks=c(-6,-4,-2,0,2,4)), col_alpha = 0, tm_legend(title="", limits=c(c1,c2), frame=FALSE, reverse=TRUE)) + tm_layout(frame=FALSE) + tm_shape(gwr_data %>% filter(abs(gwr_BAME_t)>1.96 & clusters == "High-High")) + tm_borders(col="black", lwd=0.2) + tm_layout(frame=FALSE,legend.text.size=1,legend.reverse=TRUE) + tm_title("")
 ```
 
 
@@ -613,7 +614,6 @@ tm_shape(contribution_data_long %>% filter(alpha_fo == 1)) +
   ) +
 tm_layout(frame = FALSE, legend.frame = FALSE, legend.text.size=1.2)
 
-
 ```
 
 ```{r}
@@ -663,7 +663,7 @@ gwr_data_sf <- st_as_sf(gwr_data_sp)
 # for Thames figure use polygon index 3015
 # for edge case use polygon index 58
 
-selected_polygon_index <- 50
+selected_polygon_index <- 550
 selected_polygon <- gwr_data_sf[selected_polygon_index, ]
 
 # extract centroids of the polygons
@@ -682,18 +682,9 @@ gwr_data_sf$category[nearest_indices] <- "nearest"  # mark nearest polygons
 
 # create map
 tm_shape(gwr_data_sf) + 
-  tm_fill("category", palette = c("centre"="black", "nearest"="orange", "outer"="white"), fill_alpha = 0.8) + tm_layout(frame = FALSE, legend.show = FALSE) + tm_borders("black", lwd = 0.2)
+  tm_fill("category", palette = c("centre"="black", "nearest"="orange", "outer"="white")) + tm_layout(frame = FALSE, legend.show = FALSE) + tm_borders("black", lwd = 0.2)
 ```
 
 
-## Representativeness threshold
-```{r representativeness, }
-# create map for Appendix - representativeness 
-tm_shape(gwr_data_sf) + 
-  tm_fill("category", palette = c("centre"="black", "nearest"="orange", "outer"="white"), fill_alpha = 0.8) + tm_layout(frame = FALSE, legend.show = FALSE) + tm_borders("black", lwd = 0.2)
-
-# create map for Appendix - transaction volume 
-
-```
 
 
